@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Tuple
 
 
@@ -45,43 +45,25 @@ CENTROS = [
 
 # ── Costos de transporte ───────────────────────────────────────────────────────
 
-# costo_planta_centro[planta_id][centro_id]
-# Nota: la imagen no muestra costos P→CD explícitos; se usa costo directo
-# planta→cliente cuando no hay CD intermedio requerido por el modelo.
-# El modelo es de dos escalones: Planta → CD → Cliente.
-# Los costos planta→cliente de la imagen son los costos del primer tramo
-# interpretados como planta→CD (proxy), y los costos CD→cliente son el segundo.
-
-# Costos planta → cliente (tabla imagen, usados como costo planta→CD aproximado
-# cuando el flujo pasa por un CD; aquí se modelan como costo directo P→CD
-# asumiendo distribución uniforme hacia cada CD según la tabla disponible).
-# Para este modelo de 2 escalones exactos, necesitamos P→CD y CD→C por separado.
-# La imagen provee: tabla "Costos planta→cliente" (usada como costo etapa 1)
-# y tabla "Costos CD→cliente" (etapa 2). Interpretamos P→CD como el promedio
-# de la fila de la planta en la tabla P→C (costo de primer tramo genérico),
-# y CD→C directamente de la tabla.
-
-# Costos planta → centro de distribución
-# (extraídos de la tabla "Costos planta → cliente" de la imagen,
-#  columnas C1..C5 como referencia de costo de primer tramo;
-#  se asigna costo_planta_cd como mínimo de la fila para reflejar
-#  el costo de enviar desde la planta hacia el hub más económico)
-# Valores directos de la imagen por fila de planta (se usan las columnas
-# de la tabla como costo de envío planta→CD; CD1 corresponde a columnas
-# de menor índice, CD2 a las de mayor, siguiendo la convención del ejercicio)
-
-#         CD1   CD2
-COSTO_PLANTA_CD: Dict[Tuple[str, str], float] = {
-    ("P1", "CD1"): 8,
-    ("P1", "CD2"): 11,
-    ("P2", "CD1"): 6,
-    ("P2", "CD2"): 8,
-    ("P3", "CD1"): 7,
-    ("P3", "CD2"): 7,
+# Tabla "Costos planta → cliente" de la imagen (ruta directa)
+#           C1   C2   C3   C4   C5
+COSTO_PLANTA_CLIENTE: Dict[Tuple[str, str], float] = {
+    ("P1", "C1"): 8,  ("P1", "C2"): 7,  ("P1", "C3"): 9,  ("P1", "C4"): 10, ("P1", "C5"): 11,
+    ("P2", "C1"): 6,  ("P2", "C2"): 8,  ("P2", "C3"): 7,  ("P2", "C4"): 9,  ("P2", "C5"): 8,
+    ("P3", "C1"): 7,  ("P3", "C2"): 6,  ("P3", "C3"): 5,  ("P3", "C4"): 8,  ("P3", "C5"): 7,
 }
 
-# Costos CD → cliente (tabla imagen "Costos CD → cliente")
-#         C1  C2  C3  C4  C5
+# Tabla "Costos planta → CD" (primer tramo vía CD)
+# Interpretados de la imagen: columnas de menor índice → CD1, mayores → CD2
+#           CD1  CD2
+COSTO_PLANTA_CD: Dict[Tuple[str, str], float] = {
+    ("P1", "CD1"): 8,  ("P1", "CD2"): 11,
+    ("P2", "CD1"): 6,  ("P2", "CD2"): 8,
+    ("P3", "CD1"): 7,  ("P3", "CD2"): 7,
+}
+
+# Tabla "Costos CD → cliente" de la imagen (segundo tramo vía CD)
+#            C1  C2  C3  C4  C5
 COSTO_CD_CLIENTE: Dict[Tuple[str, str], float] = {
     ("CD1", "C1"): 3, ("CD1", "C2"): 4, ("CD1", "C3"): 5, ("CD1", "C4"): 6, ("CD1", "C5"): 6,
     ("CD2", "C1"): 5, ("CD2", "C2"): 3, ("CD2", "C3"): 4, ("CD2", "C4"): 4, ("CD2", "C5"): 5,
