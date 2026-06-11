@@ -1,35 +1,3 @@
-"""
-Modelo MILP con rutas directas Y opción de pasar por CD.
-
-El solver elige libremente entre:
-  - Ruta directa : Planta p  →  Cliente c
-  - Ruta vía CD  : Planta p  →  Centro d  →  Cliente c
-
-Variables:
-    f[p,c]   continua ≥ 0   flujo directo planta p → cliente c
-    x[p,d]   continua ≥ 0   flujo planta p → centro d
-    y[d,c]   continua ≥ 0   flujo centro d → cliente c
-    z[d]     binaria         1 si el centro d se abre
-    u[p,c]   binaria         1 si la ruta directa p→c está activa
-    w[d,c]   binaria         1 si la ruta CD d→c está activa
-    s[c]     continua ≥ 0   demanda no satisfecha del cliente c
-
-Función objetivo (minimizar):
-    costos_fijos_CD
-    + transporte directo P→C
-    + transporte P→CD  +  transporte CD→C
-    + penalizaciones por déficit
-
-Restricciones:
-    1.  Oferta de cada planta  (directo + vía CD)
-    2.  Balance en cada CD  (entrada = salida)
-    3.  Capacidad de cada CD  (solo si está abierto)
-    4.  Satisfacción de demanda  (directo + vía CD + déficit)
-    5.  Linking ruta directa  u[p,c] ↔ f[p,c]
-    6.  Linking ruta CD       w[d,c] ↔ y[d,c]
-    7.  Máximo 8 rutas activas  (directas + CD→C)
-"""
-
 from pulp import LpProblem, LpMinimize, LpVariable, LpBinary, lpSum
 from data import (
     PLANTAS, CLIENTES, CENTROS,
