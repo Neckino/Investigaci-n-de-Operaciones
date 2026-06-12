@@ -1,3 +1,16 @@
+"""
+main.py — Servidor OptiNet
+FastAPI + CBC solver + sirve static/
+
+Rutas:
+  GET  /api/data      → datos de la red (plantas, CDs, clientes, costos)
+  POST /api/solve     → ejecuta MILP y devuelve solución
+  POST /api/nodes     → edita un nodo (oferta, demanda, penalización, capacidad, costo_fijo)
+  POST /api/params    → actualiza parámetros del solver (max_rutas_activas)
+  POST /api/reset     → reinicia la red a los valores originales
+  GET  /              → sirve static/index.html
+"""
+
 import copy
 from pathlib import Path
 from typing import Any
@@ -19,52 +32,63 @@ from core import (
 # ─────────────────────────────────────────────────────────────────
 
 def _build_default_network() -> NetworkData:
+    # ── Oferta verificada del Ejercicio 3 ────────────────────────
     plants = [
-        Plant("P1", "Planta 1", supply=100),   # era 150
-        Plant("P2", "Planta 2", supply=140),   # era 120
-        Plant("P3", "Planta 3", supply=160),   # era 130
+        Plant("P1", "Planta 1", supply=100),   # corregido: era 150
+        Plant("P2", "Planta 2", supply=140),   # corregido: era 120
+        Plant("P3", "Planta 3", supply=160),   # corregido: era 130
     ]
+    # ── Centros: capacidades corregidas ──────────────────────────
     dcs = [
-        DistCenter("CD1", "Centro Norte", fixed_cost=1000, capacity=180),  # capacidad era 300
-        DistCenter("CD2", "Centro Sur",   fixed_cost=900,  capacity=150),  # capacidad era 300
+        DistCenter("CD1", "Centro Norte", fixed_cost=1000, capacity=180),  # era 300
+        DistCenter("CD2", "Centro Sur",   fixed_cost=900,  capacity=150),  # era 300
     ]
+    # ── Demanda y penalizaciones verificadas (incluye C5) ────────
     clients = [
         Client("C1", "Cliente 1", demand=90,  penalty=20),  # demand era 120, penalty era 25
         Client("C2", "Cliente 2", demand=100, penalty=22),
         Client("C3", "Cliente 3", demand=110, penalty=25),  # penalty era 20
         Client("C4", "Cliente 4", demand=80,  penalty=18),  # demand era 145
-        Client("C5", "Cliente 5", demand=95,  penalty=21),  # NUEVO
+        Client("C5", "Cliente 5", demand=95,  penalty=21),  # NUEVO cliente
     ]
     arcs = [
-        # ── Planta → Cliente (directas) ──────────────────────────
+        # ── Planta → Cliente: matriz 3×5 verificada ──────────────
+        # P1: [C1=8, C2=7, C3=9, C4=10, C5=11]
         Arc("a01", "P1","plant","C1","client", unit_cost=8),
-        Arc("a02", "P1","plant","C2","client", unit_cost=11),  # leer de imagen
-        Arc("a03", "P1","plant","C3","client", unit_cost=9),
-        Arc("a04", "P1","plant","C4","client", unit_cost=10),
-        Arc("a05", "P1","plant","C5","client", unit_cost=11),
-        Arc("a06", "P2","plant","C1","client", unit_cost=6),
-        Arc("a07", "P2","plant","C2","client", unit_cost=8),
-        Arc("a08", "P2","plant","C3","client", unit_cost=7),
-        Arc("a09", "P2","plant","C4","client", unit_cost=9),
-        Arc("a10", "P2","plant","C5","client", unit_cost=8),
-        Arc("a11", "P3","plant","C1","client", unit_cost=7),
-        Arc("a12", "P3","plant","C2","client", unit_cost=6),
+        Arc("a02", "P1","plant","C2","client", unit_cost=7),   # era 10
+        Arc("a03", "P1","plant","C3","client", unit_cost=9),   # era 12
+        Arc("a04", "P1","plant","C4","client", unit_cost=10),  # era 9
+        Arc("a05", "P1","plant","C5","client", unit_cost=11),  # NUEVO
+        # P2: [C1=6, C2=8, C3=7, C4=9, C5=8]
+        Arc("a06", "P2","plant","C1","client", unit_cost=6),   # era 11
+        Arc("a07", "P2","plant","C2","client", unit_cost=8),   # era 7
+        Arc("a08", "P2","plant","C3","client", unit_cost=7),   # era 9
+        Arc("a09", "P2","plant","C4","client", unit_cost=9),   # era 13
+        Arc("a10", "P2","plant","C5","client", unit_cost=8),   # NUEVO
+        # P3: [C1=7, C2=6, C3=5, C4=8, C5=7]
+        Arc("a11", "P3","plant","C1","client", unit_cost=7),   # era 10
+        Arc("a12", "P3","plant","C2","client", unit_cost=6),   # era 8
         Arc("a13", "P3","plant","C3","client", unit_cost=5),
-        Arc("a14", "P3","plant","C4","client", unit_cost=8),
-        Arc("a15", "P3","plant","C5","client", unit_cost=7),
-        # ── Planta → CD ──────────────────────────────────────────
+        Arc("a14", "P3","plant","C4","client", unit_cost=8),   # era 11
+        Arc("a15", "P3","plant","C5","client", unit_cost=7),   # NUEVO
+        # ── Planta → CD (sin cambios, no especificados en enunciado)
         Arc("b01", "P1","plant","CD1","dc", unit_cost=3),
         Arc("b02", "P2","plant","CD1","dc", unit_cost=4),
         Arc("b03", "P1","plant","CD2","dc", unit_cost=3),
         Arc("b04", "P3","plant","CD2","dc", unit_cost=2),
-        # ── CD → Cliente ─────────────────────────────────────────
-        Arc("c01", "CD1","dc","C1","client", unit_cost=3),
+        # ── CD → Cliente: matriz 2×5 verificada ──────────────────
+        # CD1: [C1=3, C2=4, C3=5, C4=6, C5=6]
+        Arc("c01", "CD1","dc","C1","client", unit_cost=3),  # era 4
         Arc("c02", "CD1","dc","C2","client", unit_cost=4),
-        Arc("c03", "CD1","dc","C4","client", unit_cost=5),
-        Arc("c04", "CD1","dc","C5","client", unit_cost=6),
-        Arc("c05", "CD2","dc","C3","client", unit_cost=3),  # era 4
-        Arc("c06", "CD2","dc","C4","client", unit_cost=4),
-        Arc("c07", "CD2","dc","C5","client", unit_cost=5),
+        Arc("c03", "CD1","dc","C3","client", unit_cost=5),  # NUEVO (antes no existía CD1→C3)
+        Arc("c04", "CD1","dc","C4","client", unit_cost=6),  # NUEVO arco con costo corregido
+        Arc("c05", "CD1","dc","C5","client", unit_cost=6),  # NUEVO
+        # CD2: [C1=5, C2=3, C3=4, C4=4, C5=5]
+        Arc("c06", "CD2","dc","C1","client", unit_cost=5),  # NUEVO
+        Arc("c07", "CD2","dc","C2","client", unit_cost=3),  # NUEVO
+        Arc("c08", "CD2","dc","C3","client", unit_cost=4),
+        Arc("c09", "CD2","dc","C4","client", unit_cost=4),
+        Arc("c10", "CD2","dc","C5","client", unit_cost=5),  # NUEVO
     ]
     return NetworkData(
         plants=plants, dist_centers=dcs, clients=clients, arcs=arcs,

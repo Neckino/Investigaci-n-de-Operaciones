@@ -7,15 +7,15 @@
   --bg-2:       #21262D;
   --bg-3:       #2D333B;
   --border:     #30363D;
-  --accent:     #3B82F6;
-  --accent-dim: #1D4ED8;
-  --accent-glow:#3B82F620;
-  --success:    #22C55E;
-  --warning:    #F59E0B;
-  --danger:     #EF4444;
-  --text-1:     #E6EDF3;
-  --text-2:     #8B949E;
-  --text-3:     #484F58;
+  --accent:     #60A5FA;        /* azul más brillante — contraste mejorado */
+  --accent-dim: #3B82F6;
+  --accent-glow:#60A5FA20;
+  --success:    #4ADE80;        /* verde más vivo */
+  --warning:    #FCD34D;        /* ámbar brillante */
+  --danger:     #F87171;        /* rojo más suave */
+  --text-1:     #F0F6FC;        /* blanco levemente azulado — más legible */
+  --text-2:     #CDD9E5;        /* gris claro con buena legibilidad */
+  --text-3:     #8B949E;        /* gris medio */
   --mono:       'JetBrains Mono', 'Fira Code', monospace;
   --sans:       'Inter', system-ui, sans-serif;
   --sidebar-w:  280px;
@@ -788,3 +788,54 @@ html, body {
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+
+/* ── Etiquetas de columna (cascada: Plantas / CD / Clientes) ──────────────── */
+.col-label {
+  position: absolute;
+  top: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.col-label-plantas {
+  left: calc(50% - 260px);
+  transform: translateX(-50%);
+  color: #93C5FD;
+  background: #1E40AF22;
+  border: 1px solid #1E40AF55;
+}
+
+.col-label-cd {
+  left: 50%;
+  transform: translateX(-50%);
+  color: #FCD34D;
+  background: #78350F22;
+  border: 1px solid #78350F55;
+}
+
+.col-label-clientes {
+  left: calc(50% + 260px);
+  transform: translateX(-50%);
+  color: #86EFAC;
+  background: #14532D22;
+  border: 1px solid #14532D55;
+}
+
+/* ── Mejora de legibilidad en sidebar ────────────────────────────────────── */
+.field-label  { color: var(--text-2); }
+.field-value  { color: var(--text-1); }
+.param-label  { color: var(--text-2); }
+
+/* Badges con mejor contraste */
+.badge-planta  { background: #1E40AF25; color: #93C5FD; border: 1px solid #1E40AF50; }
+.badge-cliente { background: #14532D25; color: #86EFAC; border: 1px solid #14532D50; }
+.badge-centro  { background: #78350F25; color: #FCD34D; border: 1px solid #78350F50; }
+
+/* Leyenda mejorada */
+.legend-row { color: var(--text-2); font-size: 11px; }

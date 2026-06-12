@@ -1,5 +1,6 @@
 env312/
 __pycache__/
+core/__pycache__/
 *.py[cod]
 *$py.class
 .vscode/

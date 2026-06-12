@@ -10,154 +10,180 @@ window.Editor = (() => {
   let lastSolution = null
   const selectedNode = { id: null }
 
-  /* ── Paleta sincronizada con style.css ─────────────────────────────────── */
+  /* ── Paleta con alto contraste ─────────────────────────────────────────── */
   const COLOR = {
-    planta:       { bg: '#1D4ED8', border: '#3B82F6', text: '#E6EDF3' },
-    cliente:      { bg: '#15803D', border: '#22C55E', text: '#E6EDF3' },
-    cliente_def:  { bg: '#991B1B', border: '#EF4444', text: '#E6EDF3' },
-    centro_open:  { bg: '#92400E', border: '#F59E0B', text: '#E6EDF3' },
-    centro_close: { bg: '#21262D', border: '#484F58', text: '#6B7280' },
-    edge_active:  '#3B82F6',
-    edge_cd:      '#F59E0B',
-    edge_inactive:'#2D333B',
+    planta:       { bg: '#1E40AF', border: '#60A5FA', text: '#DBEAFE' },
+    cliente:      { bg: '#14532D', border: '#4ADE80', text: '#DCFCE7' },
+    cliente_def:  { bg: '#7F1D1D', border: '#F87171', text: '#FEE2E2' },
+    centro_open:  { bg: '#78350F', border: '#FCD34D', text: '#FEF3C7' },
+    centro_close: { bg: '#1C2128', border: '#6E7681', text: '#8B949E' },
+    edge_active:  '#60A5FA',
+    edge_cd:      '#FCD34D',
+    edge_inactive:'#3D444D',
   }
 
-  /* ── vis.js options ─────────────────────────────────────────────────────── */
+  /* ── vis.js options — física OFF, layout en cascada manual ──────────────── */
   const NETWORK_OPTIONS = {
-    physics: {
-      enabled: true,
-      solver: 'forceAtlas2Based',
-      forceAtlas2Based: {
-        gravitationalConstant: -80,
-        centralGravity: 0.005,
-        springLength: 140,
-        springConstant: 0.06,
-        damping: 0.4,
-        avoidOverlap: 0.8,
-      },
-      stabilization: { iterations: 180, updateInterval: 25 },
-    },
+    physics: { enabled: false },
     nodes: {
-      shape: 'dot',
-      size: 18,
-      font: { face: 'JetBrains Mono, monospace', size: 12, color: '#E6EDF3', bold: true },
+      shape: 'box',
+      widthConstraint: { minimum: 72, maximum: 88 },
+      heightConstraint: { minimum: 38 },
+      margin: { top: 9, right: 14, bottom: 9, left: 14 },
+      font: {
+        face: 'JetBrains Mono, monospace',
+        size: 13,
+        color: '#E6EDF3',
+        bold: false,
+        multi: false,
+      },
       borderWidth: 2,
       borderWidthSelected: 3,
       shadow: false,
+      shapeProperties: { borderRadius: 6 },
     },
     edges: {
-      width: 1.5,
-      smooth: { enabled: true, type: 'curvedCW', roundness: 0.12 },
-      arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+      width: 1.8,
+      smooth: { enabled: true, type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.4 },
+      arrows: { to: { enabled: true, scaleFactor: 0.55 } },
       font: {
         face: 'JetBrains Mono, monospace',
-        size: 10,
-        color: '#8B949E',
-        background: '#161B22',
-        strokeWidth: 0,
+        size: 11,
+        color: '#CDD9E5',
+        background: '#1C2128',
+        strokeWidth: 2,
+        strokeColor: '#1C2128',
         align: 'middle',
       },
-      selectionWidth: 2,
+      selectionWidth: 2.5,
     },
     interaction: {
       hover: true,
-      tooltipDelay: 200,
+      tooltipDelay: 150,
       hideEdgesOnDrag: false,
       multiselect: false,
-      selectConnectedEdges: false,
+      selectConnectedEdges: true,
     },
-    layout: { randomSeed: 42 },
+    layout: { hierarchical: false },
   }
 
-  /* ── Construir nodos vis desde datos de la API ──────────────────────────── */
+  /* ── Construir nodos vis con layout en cascada (Plantas → CD → Clientes) ── */
   function buildNodes(data) {
     const nodes = []
 
-    data.plantas.forEach(p => nodes.push({
+    // Columnas X fijas: Plantas | CD | Clientes
+    const COL = { planta: -380, cd: 0, cliente: 380 }
+    const GAP = 110  // espaciado vertical entre nodos
+
+    // Centrar verticalmente cada columna
+    const centerY = (count) => (idx) => (idx - (count - 1) / 2) * GAP
+
+    const yPlanta  = centerY(data.plantas.length)
+    const yCentro  = centerY(data.centros.length)
+    const yCliente = centerY(data.clientes.length)
+
+    data.plantas.forEach((p, i) => nodes.push({
       id: p.id,
-      label: p.id,
-      title: `Planta ${p.id}\nOferta: ${p.oferta} u.`,
+      label: `${p.id}\n${p.oferta}u`,
+      title: `<b>Planta ${p.id}</b><br>Oferta: <b>${p.oferta} u.</b>`,
       group: 'planta',
-      color: { background: COLOR.planta.bg, border: COLOR.planta.border, highlight: { background: '#2563EB', border: '#60A5FA' } },
-      x: -300, y: (nodes.length - 1) * 120,
+      color: {
+        background: COLOR.planta.bg,
+        border: COLOR.planta.border,
+        highlight: { background: '#2563EB', border: '#93C5FD' },
+        hover: { background: '#1D4ED8', border: '#93C5FD' },
+      },
+      font: { color: COLOR.planta.text, multi: false },
+      x: COL.planta, y: yPlanta(i),
+      fixed: { x: true, y: true },
       _data: p,
     }))
 
     data.centros.forEach((d, i) => nodes.push({
       id: d.id,
-      label: d.id,
-      title: `Centro ${d.id}\nCap: ${d.capacidad} u.\nFijo: $${d.costo_fijo}`,
+      label: `${d.id}\n$${d.costo_fijo.toLocaleString()}`,
+      title: `<b>Centro ${d.id}</b><br>Cap: <b>${d.capacidad} u.</b><br>Fijo: <b>$${d.costo_fijo.toLocaleString()}</b>`,
       group: 'centro',
-      shape: 'diamond',
-      size: 16,
-      color: { background: COLOR.centro_close.bg, border: COLOR.centro_close.border, highlight: { background: '#374151', border: '#9CA3AF' } },
-      x: 0, y: i * 160 - 80,
+      shape: 'box',
+      color: {
+        background: COLOR.centro_close.bg,
+        border: COLOR.centro_close.border,
+        highlight: { background: '#2D333B', border: '#9CA3AF' },
+        hover: { background: '#2D333B', border: '#9CA3AF' },
+      },
+      font: { color: COLOR.centro_close.text, multi: false },
+      x: COL.cd, y: yCentro(i),
+      fixed: { x: true, y: true },
       _data: d,
     }))
 
     data.clientes.forEach((c, i) => nodes.push({
       id: c.id,
-      label: c.id,
-      title: `Cliente ${c.id}\nDemanda: ${c.demanda} u.\nPenaliz: $${c.penalizacion}/u.`,
+      label: `${c.id}\n${c.demanda}u`,
+      title: `<b>Cliente ${c.id}</b><br>Demanda: <b>${c.demanda} u.</b><br>Penaliz: <b>$${c.penalizacion}/u.</b>`,
       group: 'cliente',
-      color: { background: COLOR.cliente.bg, border: COLOR.cliente.border, highlight: { background: '#16A34A', border: '#4ADE80' } },
-      x: 300, y: (i - 2) * 100,
+      color: {
+        background: COLOR.cliente.bg,
+        border: COLOR.cliente.border,
+        highlight: { background: '#16A34A', border: '#86EFAC' },
+        hover: { background: '#166534', border: '#86EFAC' },
+      },
+      font: { color: COLOR.cliente.text, multi: false },
+      x: COL.cliente, y: yCliente(i),
+      fixed: { x: true, y: true },
       _data: c,
     }))
 
     return nodes
   }
 
-  /* ── Construir aristas desde costos ─────────────────────────────────────── */
+  /* ── Construir aristas con colores contrastados ─────────────────────────── */
   function buildEdges(data) {
     const edges = []
     let eid = 0
 
-    // Planta → Cliente (directas)
+    // Planta → Cliente (directas) — línea continua azul
     Object.entries(data.costos_planta_cliente).forEach(([key, cost]) => {
       const [p, c] = key.replace('(', '').replace(')', '').split(', ').map(s => s.replace(/'/g, '').trim())
       edges.push({
         id: `dir_${eid++}`,
         from: p, to: c,
         label: `$${cost}`,
-        color: { color: COLOR.edge_inactive, highlight: COLOR.edge_active, hover: '#484F58' },
-        width: 1,
+        color: { color: COLOR.edge_inactive, highlight: COLOR.edge_active, hover: '#5E6E80', opacity: 0.55 },
+        width: 1.2,
         dashes: false,
-        _type: 'direct',
-        _cost: cost,
-        _key: `${p}_${c}`,
+        font: { color: '#8B949E', background: '#161B22', size: 10, strokeWidth: 2, strokeColor: '#161B22' },
+        _type: 'direct', _cost: cost, _key: `${p}_${c}`,
       })
     })
 
-    // Planta → CD
+    // Planta → CD — línea punteada amarilla
     Object.entries(data.costos_planta_cd).forEach(([key, cost]) => {
       const [p, d] = key.replace('(', '').replace(')', '').split(', ').map(s => s.replace(/'/g, '').trim())
       edges.push({
         id: `pcd_${eid++}`,
         from: p, to: d,
         label: `$${cost}`,
-        color: { color: COLOR.edge_inactive, highlight: COLOR.edge_cd, hover: '#484F58' },
-        width: 1,
-        dashes: [4, 3],
-        _type: 'planta_cd',
-        _cost: cost,
-        _key: `${p}_${d}`,
+        color: { color: '#4A3F20', highlight: COLOR.edge_cd, hover: '#5E5030', opacity: 0.55 },
+        width: 1.2,
+        dashes: [6, 4],
+        font: { color: '#8B949E', background: '#161B22', size: 10, strokeWidth: 2, strokeColor: '#161B22' },
+        _type: 'planta_cd', _cost: cost, _key: `${p}_${d}`,
       })
     })
 
-    // CD → Cliente
+    // CD → Cliente — línea guión-punto naranja/ámbar
     Object.entries(data.costos_cd_cliente).forEach(([key, cost]) => {
       const [d, c] = key.replace('(', '').replace(')', '').split(', ').map(s => s.replace(/'/g, '').trim())
       edges.push({
         id: `cdc_${eid++}`,
         from: d, to: c,
         label: `$${cost}`,
-        color: { color: COLOR.edge_inactive, highlight: COLOR.edge_cd, hover: '#484F58' },
-        width: 1,
-        dashes: [2, 4],
-        _type: 'cd_cliente',
-        _cost: cost,
-        _key: `${d}_${c}`,
+        color: { color: '#3D3420', highlight: COLOR.edge_cd, hover: '#4A3F28', opacity: 0.55 },
+        width: 1.2,
+        dashes: [2, 5],
+        font: { color: '#8B949E', background: '#161B22', size: 10, strokeWidth: 2, strokeColor: '#161B22' },
+        _type: 'cd_cliente', _cost: cost, _key: `${d}_${c}`,
       })
     })
 
@@ -194,20 +220,32 @@ window.Editor = (() => {
       if (node.group === 'centro') {
         const open = abiertos.has(node.id)
         updates.color = open
-          ? { background: COLOR.centro_open.bg, border: COLOR.centro_open.border, highlight: { background: '#B45309', border: '#FCD34D' } }
-          : { background: COLOR.centro_close.bg, border: COLOR.centro_close.border }
-        updates.title = `Centro ${node.id}\nCap: ${node._data.capacidad} u.\nFijo: $${node._data.costo_fijo}\n${open ? '✓ Abierto' : '✗ Cerrado'}`
+          ? { background: COLOR.centro_open.bg, border: COLOR.centro_open.border,
+              highlight: { background: '#92400E', border: '#FDE68A' },
+              hover: { background: '#92400E', border: '#FDE68A' } }
+          : { background: COLOR.centro_close.bg, border: COLOR.centro_close.border,
+              highlight: { background: '#2D333B', border: '#9CA3AF' } }
+        updates.font = { color: open ? COLOR.centro_open.text : COLOR.centro_close.text }
+        updates.label = `${node.id}\n${open ? '✓ Abierto' : '✗ Cerrado'}`
+        updates.title = `<b>Centro ${node.id}</b><br>Cap: <b>${node._data.capacidad} u.</b><br>Fijo: <b>$${node._data.costo_fijo.toLocaleString()}</b><br>${open ? '✓ Abierto' : '✗ Cerrado'}`
       }
 
       if (node.group === 'cliente') {
         const def = deficit[node.id] || 0
         const hasDeficit = def > 0
-        updates.color = hasDeficit
-          ? { background: COLOR.cliente_def.bg, border: COLOR.cliente_def.border, highlight: { background: '#B91C1C', border: '#F87171' } }
-          : { background: COLOR.cliente.bg, border: COLOR.cliente.border }
         const dem = node._data.demanda
         const rec = dem - def
-        updates.title = `Cliente ${node.id}\nDemanda: ${dem} u.\nRecibido: ${rec} u.${hasDeficit ? `\nDéficit: ${def} u. ⚠` : '\n✓ Satisfecho'}`
+        const pct = Math.round((rec / dem) * 100)
+        updates.color = hasDeficit
+          ? { background: COLOR.cliente_def.bg, border: COLOR.cliente_def.border,
+              highlight: { background: '#991B1B', border: '#FCA5A5' },
+              hover: { background: '#991B1B', border: '#FCA5A5' } }
+          : { background: COLOR.cliente.bg, border: COLOR.cliente.border,
+              highlight: { background: '#15803D', border: '#86EFAC' } }
+        updates.font = { color: hasDeficit ? COLOR.cliente_def.text : COLOR.cliente.text }
+        updates.label = `${node.id}\n${pct}% ✓`
+        if (hasDeficit) updates.label = `${node.id}\n${pct}% ⚠`
+        updates.title = `<b>Cliente ${node.id}</b><br>Demanda: <b>${dem} u.</b><br>Recibido: <b>${rec} u.</b>${hasDeficit ? `<br>⚠ Déficit: <b>${def} u.</b>` : '<br>✓ Satisfecho'}`
       }
 
       nodesDS.update(updates)
@@ -222,18 +260,18 @@ window.Editor = (() => {
       if (edge._type === 'direct') {
         active = activeDir.has(edge._key)
         flujo  = sol.flujo_directo[`('${edge.from}', '${edge.to}')`] || 0
-        accentColor = COLOR.edge_active
+        accentColor = COLOR.edge_active          // azul claro
       } else if (edge._type === 'planta_cd') {
         active = activePCD.has(edge._key)
         flujo  = sol.flujo_planta_cd[`('${edge.from}', '${edge.to}')`] || 0
-        accentColor = COLOR.edge_cd
+        accentColor = COLOR.edge_cd              // ámbar
       } else if (edge._type === 'cd_cliente') {
         active = activeCDC.has(edge._key)
         flujo  = sol.flujo_cd_cliente[`('${edge.from}', '${edge.to}')`] || 0
-        accentColor = COLOR.edge_cd
+        accentColor = COLOR.edge_cd              // ámbar
       }
 
-      const w = active ? 1.5 + 4 * (flujo / maxFlujo) : 1
+      const w   = active ? Math.max(2.5, 2 + 5 * (flujo / maxFlujo)) : 1
       const lbl = active ? `${flujo.toFixed(0)}u` : `$${edge._cost}`
 
       edgesDS.update({
@@ -243,42 +281,17 @@ window.Editor = (() => {
         color: {
           color:     active ? accentColor : COLOR.edge_inactive,
           highlight: accentColor,
-          hover:     active ? accentColor : '#484F58',
-          opacity:   active ? 1.0 : 0.25,
+          hover:     active ? accentColor : '#5E6E80',
+          opacity:   active ? 1.0 : 0.2,
         },
         font: {
-          color:      active ? accentColor : '#484F58',
-          background: '#161B22',
-          size:       active ? 11 : 9,
-          bold:       active,
+          color:       active ? accentColor : '#484F58',
+          background:  '#161B22',
+          strokeWidth: 2,
+          strokeColor: '#161B22',
+          size:        active ? 12 : 10,
+          bold:        active,
         },
-      })
-    })
-  }
-
-  /* ── Reset a estado inicial (sin solución) ──────────────────────────────── */
-  function resetVisual() {
-    if (!network) return
-    lastSolution = null
-
-    nodesDS.forEach(node => {
-      const updates = { id: node.id }
-      if (node.group === 'planta')
-        updates.color = { background: COLOR.planta.bg, border: COLOR.planta.border }
-      if (node.group === 'cliente')
-        updates.color = { background: COLOR.cliente.bg, border: COLOR.cliente.border }
-      if (node.group === 'centro')
-        updates.color = { background: COLOR.centro_close.bg, border: COLOR.centro_close.border }
-      nodesDS.update(updates)
-    })
-
-    edgesDS.forEach(edge => {
-      edgesDS.update({
-        id: edge.id,
-        width: 1,
-        label: `$${edge._cost}`,
-        color: { color: COLOR.edge_inactive, opacity: 0.6 },
-        font: { color: '#484F58', size: 9, bold: false },
       })
     })
   }
@@ -296,6 +309,42 @@ window.Editor = (() => {
     window.Sidebar && window.Sidebar.selectNode(id, node._data, node.group)
   }
 
+  /* ── Reset a estado inicial (sin solución) ──────────────────────────────── */
+  function resetVisual() {
+    if (!network) return
+    lastSolution = null
+
+    nodesDS.forEach(node => {
+      const updates = { id: node.id }
+      if (node.group === 'planta') {
+        updates.color = { background: COLOR.planta.bg, border: COLOR.planta.border }
+        updates.font  = { color: COLOR.planta.text }
+        updates.label = `${node.id}\n${node._data.oferta}u`
+      }
+      if (node.group === 'cliente') {
+        updates.color = { background: COLOR.cliente.bg, border: COLOR.cliente.border }
+        updates.font  = { color: COLOR.cliente.text }
+        updates.label = `${node.id}\n${node._data.demanda}u`
+      }
+      if (node.group === 'centro') {
+        updates.color = { background: COLOR.centro_close.bg, border: COLOR.centro_close.border }
+        updates.font  = { color: COLOR.centro_close.text }
+        updates.label = `${node.id}\n$${node._data.costo_fijo.toLocaleString()}`
+      }
+      nodesDS.update(updates)
+    })
+
+    edgesDS.forEach(edge => {
+      edgesDS.update({
+        id: edge.id,
+        width: 1.2,
+        label: `$${edge._cost}`,
+        color: { color: COLOR.edge_inactive, opacity: 0.5 },
+        font: { color: '#6E7681', size: 10, background: '#161B22', strokeWidth: 2, strokeColor: '#161B22', bold: false },
+      })
+    })
+  }
+
   /* ── Init ───────────────────────────────────────────────────────────────── */
   function init(data) {
     const container = document.getElementById('network-canvas')
@@ -310,11 +359,9 @@ window.Editor = (() => {
     network.on('selectNode',   onNodeSelect)
     network.on('deselectNode', onNodeSelect)
 
-    network.on('stabilizationIterationsDone', () => {
-      network.setOptions({ physics: { enabled: false } })
-    })
+    // Fit al canvas tras render inicial
+    setTimeout(() => network.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } }), 100)
 
-    // Hover tooltip nativo de vis (title del nodo)
     return network
   }
 
