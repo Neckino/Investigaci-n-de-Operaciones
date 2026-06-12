@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OptiNet — Red de distribución logística</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- vis-network -->
+<script src="/static/vis-network.min.js"></script>
+<link rel="stylesheet" href="/static/vis-network.min.css">
+
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header id="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="3"  cy="8"  r="2"/>
+          <circle cx="13" cy="3"  r="2"/>
+          <circle cx="13" cy="13" r="2"/>
+          <circle cx="8"  cy="8"  r="1.5" fill="white" stroke="none"/>
+          <line x1="5" y1="8"  x2="11" y2="4.2"/>
+          <line x1="5" y1="8"  x2="11" y2="11.8"/>
+          <line x1="9.5" y1="8" x2="11" y2="4.2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">OptiNet</div>
+        <div class="brand-tag">MILP · CBC Solver</div>
+      </div>
+    </div>
+
+    <div class="header-sep"></div>
+
+    <div class="header-scenario">
+      <span>Escenario</span>
+      <span class="scenario-badge" id="scenario-name">Base</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-ghost" onclick="APP.resetData()" title="Reiniciar datos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+        Reiniciar
+      </button>
+
+      <button class="btn btn-primary" id="btn-solve" onclick="APP.solve()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span class="btn-label">Resolver</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+  <aside id="sidebar">
+
+    <!-- Plantas -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <div class="section-title">
+          <div class="section-dot dot-planta"></div>
+          Plantas
+        </div>
+        <span class="section-count" id="count-plantas">—</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+      <div class="sidebar-section-body">
+        <div id="plantas-list"></div>
+      </div>
+    </div>
+
+    <!-- Centros -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <div class="section-title">
+          <div class="section-dot dot-centro"></div>
+          Centros de distribución
+        </div>
+        <span class="section-count" id="count-centros">—</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+      <div class="sidebar-section-body">
+        <div id="centros-list"></div>
+      </div>
+    </div>
+
+    <!-- Clientes -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <div class="section-title">
+          <div class="section-dot dot-cliente"></div>
+          Clientes
+        </div>
+        <span class="section-count" id="count-clientes">—</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+      <div class="sidebar-section-body">
+        <div id="clientes-list"></div>
+      </div>
+    </div>
+
+    <!-- Parámetros del solver -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <div class="section-title">
+          <div class="section-dot" style="background:var(--text-3)"></div>
+          Parámetros
+        </div>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+      <div class="sidebar-section-body">
+        <div class="params-body">
+          <div class="param-row">
+            <span class="param-label">Máx. rutas activas</span>
+            <input class="param-input" type="number" id="param-max-rutas" value="8" min="1" max="50"
+              onchange="APP.updateParam('max_rutas_activas', this.value)">
+          </div>
+          <div class="param-row">
+            <span class="param-label">Oferta total</span>
+            <span class="param-label" id="stat-oferta" style="font-family:var(--mono); color:var(--text-1)">—</span>
+          </div>
+          <div class="param-row">
+            <span class="param-label">Demanda total</span>
+            <span class="param-label" id="stat-demanda" style="font-family:var(--mono); color:var(--text-1)">—</span>
+          </div>
+          <div class="param-row">
+            <span class="param-label">Gap</span>
+            <span class="param-label" id="stat-gap" style="font-family:var(--mono); color:var(--danger)">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de edición inline -->
+    <div id="edit-panel" style="display:none; border-top:1px solid var(--border); margin-top:auto; flex-shrink:0; background:var(--bg-0)">
+    </div>
+
+  </aside>
+
+  <!-- ── Canvas ─────────────────────────────────────────────────────────── -->
+  <main id="canvas-area">
+    <div id="network-canvas"></div>
+
+    <!-- Toolbar flotante -->
+    <div id="canvas-toolbar">
+      <button class="canvas-btn" onclick="Editor.fitAll()" title="Ajustar vista">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+      </button>
+      <button class="canvas-btn" onclick="Editor.zoomIn()" title="Acercar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+      <button class="canvas-btn" onclick="Editor.zoomOut()" title="Alejar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+      <button class="canvas-btn" onclick="Editor.resetPhys()" title="Reorganizar nodos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Status bar -->
+    <div id="status-bar">
+      <div id="status-dot" class="status-dot"></div>
+      <span id="status-text">Listo para resolver</span>
+    </div>
+
+    <!-- Leyenda -->
+    <div id="legend">
+      <div class="legend-title">Referencias</div>
+      <div class="legend-row">
+        <div class="legend-circle" style="background:#1D4ED8; border:2px solid #3B82F6"></div>
+        Planta
+      </div>
+      <div class="legend-row">
+        <div class="legend-circle" style="background:#92400E; border:2px solid #F59E0B; border-radius:2px; transform:rotate(45deg); width:9px; height:9px"></div>
+        Centro distribución
+      </div>
+      <div class="legend-row">
+        <div class="legend-circle" style="background:#15803D; border:2px solid #22C55E"></div>
+        Cliente satisfecho
+      </div>
+      <div class="legend-row">
+        <div class="legend-circle" style="background:#991B1B; border:2px solid #EF4444"></div>
+        Cliente con déficit
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:#3B82F6; height:3px"></div>
+        Ruta activa directa
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:#F59E0B; height:2px; border-top:2px dashed #F59E0B; background:none"></div>
+        Ruta vía CD
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Results panel ──────────────────────────────────────────────────── -->
+  <aside id="results">
+    <div class="results-header">
+      <span class="results-title">Resultado</span>
+      <span class="results-state empty" id="results-state">Sin resolver</span>
+    </div>
+
+    <!-- Empty state -->
+    <div id="results-empty" style="display:flex">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+      <p>Configura la red y presiona<br><strong>Resolver</strong> para ejecutar el optimizador.</p>
+    </div>
+
+    <!-- Results content -->
+    <div id="results-content" style="display:none">
+
+      <div class="cost-hero">
+        <div class="cost-label">Costo total mínimo</div>
+        <div class="cost-value" id="cost-value"><span class="cost-prefix">$</span>—</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-cell">
+          <div class="kpi-label">Costos fijos</div>
+          <div class="kpi-val" id="kpi-fijos">—</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Penalizaciones</div>
+          <div class="kpi-val" id="kpi-penaliz">—</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">CDs abiertos</div>
+          <div class="kpi-val" id="kpi-centros">—</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Rutas activas</div>
+          <div class="kpi-val" id="kpi-rutas">—</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Déficit total</div>
+          <div class="kpi-val" id="kpi-deficit">—</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Gap O/D</div>
+          <div class="kpi-val" id="kpi-gap">—</div>
+        </div>
+      </div>
+
+      <div class="desglose-section">
+        <div class="desglose-title">Desglose de costos</div>
+        <div id="desglose-rows"></div>
+      </div>
+
+      <div class="flujos-section">
+        <div class="flujos-title">Flujos activos</div>
+        <div id="flujos-rows"></div>
+      </div>
+
+      <div class="clientes-section">
+        <div class="clientes-title">Cobertura por cliente</div>
+        <div id="clientes-bars"></div>
+      </div>
+
+    </div>
+  </aside>
+
+</div><!-- /app -->
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Scripts -->
+<script src="/static/editor.js"></script>
+<script src="/static/dashboard.js"></script>
+<script>
+/* ── APP controller ────────────────────────────────────────────────────── */
+window.APP = (() => {
+
+  let appData  = null
+  let pendingParams = {}
+
+  async function loadData() {
+    try {
+      const res  = await fetch('/api/data')
+      appData    = await res.json()
+
+      // Init editor
+      Editor.init(appData)
+
+      // Sidebar
+      Sidebar.render(appData)
+
+      // Contadores header
+      document.getElementById('count-plantas').textContent   = appData.plantas.length
+      document.getElementById('count-centros').textContent   = appData.centros.length
+      document.getElementById('count-clientes').textContent  = appData.clientes.length
+
+      // Stats gap
+      const oferta  = appData.plantas.reduce((s, p) => s + p.oferta, 0)
+      const demanda = appData.clientes.reduce((s, c) => s + c.demanda, 0)
+      document.getElementById('stat-oferta').textContent  = `${oferta} u.`
+      document.getElementById('stat-demanda').textContent = `${demanda} u.`
+      document.getElementById('stat-gap').textContent     = `${demanda - oferta} u.`
+
+      setStatus('ready', 'Red cargada')
+
+    } catch (e) {
+      setStatus('error', 'Error cargando datos')
+      toast('No se pudo conectar con el backend', 'error')
+    }
+  }
+
+  async function solve() {
+    const btn = document.getElementById('btn-solve')
+    btn.classList.add('loading')
+    btn.disabled = true
+    setStatus('solving', 'Resolviendo…')
+
+    try {
+      const res = await fetch('/api/solve', { method: 'POST' })
+      const sol = await res.json()
+
+      Dashboard.render(sol)
+      Editor.applySolution(sol)
+
+      if (sol.factible) {
+        setStatus('ready', `Óptimo · $${sol.costo_total.toLocaleString()}`)
+        toast(`Solución óptima: $${sol.costo_total.toLocaleString()}`, 'success')
+      } else {
+        setStatus('error', 'Sin solución factible')
+        toast('El problema no tiene solución factible', 'error')
+      }
+
+    } catch (e) {
+      setStatus('error', 'Error en el solver')
+      toast('Error ejecutando el solver', 'error')
+    } finally {
+      btn.classList.remove('loading')
+      btn.disabled = false
+    }
+  }
+
+  async function resetData() {
+    try {
+      await fetch('/api/reset', { method: 'POST' })
+      Dashboard.clearResults()
+      await loadData()
+      toast('Red reiniciada a valores originales', 'success')
+    } catch (e) {
+      toast('Error al reiniciar', 'error')
+    }
+  }
+
+  async function updateParam(key, value) {
+    pendingParams[key] = parseFloat(value)
+    try {
+      await fetch('/api/params', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pendingParams)
+      })
+      Dashboard.clearResults()
+    } catch(e) {}
+  }
+
+  // Inicializar al cargar
+  document.addEventListener('DOMContentLoaded', loadData)
+
+  return { loadData, solve, resetData, updateParam }
+})()
+</script>
+
+</body>
+</html>
