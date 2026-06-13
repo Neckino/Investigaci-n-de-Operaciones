@@ -44,7 +44,7 @@ optinet/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/usuario/optinet.git
+git clone https://github.com/Neckino/Investigaci-n-de-Operaciones
 cd optinet
 
 # 2. Crear entorno virtual
@@ -61,7 +61,6 @@ pip install -r requirements.txt
 ## Uso
 
 ```bash
-cd optinet
 uvicorn main:app --reload --port 8000
 ```
 
@@ -121,4 +120,4 @@ min  Σ unit_cost[a]·x[a]  +  Σ fixed_cost[d]·y[d]  +  Σ penalty[c]·s[c]
 ## Autores
 
 Desarrollado para el curso de **Investigación de Operaciones**  
-Universidad — 2025
+Universidad — 2026
