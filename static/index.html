@@ -162,11 +162,6 @@
   <main id="canvas-area">
     <div id="network-canvas"></div>
 
-    <!-- Etiquetas de columna en cascada -->
-    <div class="col-label col-label-plantas">Plantas</div>
-    <div class="col-label col-label-cd">Centros dist.</div>
-    <div class="col-label col-label-clientes">Clientes</div>
-
     <!-- Toolbar flotante -->
     <div id="canvas-toolbar">
       <button class="canvas-btn" onclick="Editor.fitAll()" title="Ajustar vista">
@@ -198,6 +193,15 @@
           <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
         </svg>
       </button>
+      <div class="canvas-btn-sep"></div>
+      <button class="canvas-btn" id="btn-toggle-cd" onclick="Editor.toggleCentrosCerrados()" title="Ocultar/mostrar centros cerrados">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+          <line x1="10" y1="14" x2="14" y2="14"/>
+        </svg>
+      </button>
     </div>
 
     <!-- Status bar -->
@@ -208,39 +212,48 @@
 
     <!-- Leyenda -->
     <div id="legend">
-      <div class="legend-title">Referencias</div>
-      <div class="legend-row">
-        <div class="legend-circle" style="background:#1E40AF; border:2px solid #60A5FA"></div>
-        Planta (oferta)
+      <div class="legend-header">
+        <div class="legend-title">Referencias</div>
+        <button class="legend-toggle" id="legend-toggle" onclick="APP.toggleLegend()" title="Ocultar leyenda">
+          <svg id="legend-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
       </div>
-      <div class="legend-row">
-        <div class="legend-circle" style="background:#1C2128; border:2px solid #6E7681; border-radius:3px; width:10px; height:10px"></div>
-        Centro dist. (cerrado)
-      </div>
-      <div class="legend-row">
-        <div class="legend-circle" style="background:#78350F; border:2px solid #FCD34D; border-radius:3px; width:10px; height:10px"></div>
-        Centro dist. (abierto)
-      </div>
-      <div class="legend-row">
-        <div class="legend-circle" style="background:#14532D; border:2px solid #4ADE80"></div>
-        Cliente satisfecho
-      </div>
-      <div class="legend-row">
-        <div class="legend-circle" style="background:#7F1D1D; border:2px solid #F87171"></div>
-        Cliente con déficit
-      </div>
-      <div style="border-top:1px solid var(--border); margin: 6px 0;"></div>
-      <div class="legend-row">
-        <div class="legend-line" style="background:#60A5FA; height:2px"></div>
-        Ruta directa activa
-      </div>
-      <div class="legend-row">
-        <div class="legend-line" style="border-top:2px dashed #FCD34D; background:none; height:0; margin-top:5px"></div>
-        Ruta vía CD activa
-      </div>
-      <div class="legend-row">
-        <div class="legend-line" style="border-top:1px solid #3D444D; background:none; height:0; margin-top:5px; opacity:0.7"></div>
-        Ruta inactiva (costo)
+      <div id="legend-body">
+        <div class="legend-row">
+          <div class="legend-circle" style="background:#3B1F6E; border:2px solid #A78BFA"></div>
+          Planta (oferta)
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle" style="background:#1C2128; border:2px solid #6E7681; border-radius:3px; width:10px; height:10px"></div>
+          Centro dist. (cerrado)
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle" style="background:#78350F; border:2px solid #FCD34D; border-radius:3px; width:10px; height:10px"></div>
+          Centro dist. (abierto)
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle" style="background:#14532D; border:2px solid #4ADE80"></div>
+          Cliente satisfecho
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle" style="background:#7F1D1D; border:2px solid #F87171"></div>
+          Cliente con déficit
+        </div>
+        <div style="border-top:1px solid var(--border); margin: 6px 0;"></div>
+        <div class="legend-row">
+          <div class="legend-line" style="background:#60A5FA; height:2px"></div>
+          Ruta directa activa
+        </div>
+        <div class="legend-row">
+          <div class="legend-line" style="border-top:2px dashed #FCD34D; background:none; height:0; margin-top:5px"></div>
+          Ruta vía CD activa
+        </div>
+        <div class="legend-row">
+          <div class="legend-line" style="border-top:1px solid #3D444D; background:none; height:0; margin-top:5px; opacity:0.7"></div>
+          Ruta inactiva (costo)
+        </div>
       </div>
     </div>
   </main>
@@ -329,8 +342,8 @@
 <div id="toast-container"></div>
 
 <!-- Scripts -->
-<script src="/static/editor.js"></script>
-<script src="/static/dashboard.js"></script>
+<script src="/static/editor.js?v=4"></script>
+<script src="/static/dashboard.js?v=4"></script>
 <script>
 /* ── APP controller ────────────────────────────────────────────────────── */
 window.APP = (() => {
@@ -422,6 +435,18 @@ window.APP = (() => {
     } catch(e) {}
   }
 
+  function toggleLegend() {
+    const body = document.getElementById('legend-body')
+    const icon = document.getElementById('legend-toggle-icon')
+    const btn  = document.getElementById('legend-toggle')
+    const hidden = body.style.display === 'none'
+    body.style.display = hidden ? '' : 'none'
+    icon.innerHTML = hidden
+      ? '<polyline points="18 15 12 9 6 15"/>'
+      : '<polyline points="6 9 12 15 18 9"/>'
+    btn.title = hidden ? 'Ocultar leyenda' : 'Mostrar leyenda'
+  }
+
   function toggleMaximize() {
     const app  = document.getElementById('app')
     const btn  = document.getElementById('btn-maximize')
@@ -441,7 +466,7 @@ window.APP = (() => {
   // Inicializar al cargar
   document.addEventListener('DOMContentLoaded', loadData)
 
-  return { loadData, solve, resetData, updateParam, toggleMaximize }
+  return { loadData, solve, resetData, updateParam, toggleMaximize, toggleLegend }
 })()
 </script>
 
