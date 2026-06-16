@@ -26,18 +26,24 @@ Aplicación web para la optimización de redes de transporte mediante **Programa
 
 ```
 optinet/
-├── main.py              # Servidor FastAPI + rutas API
-├── requirements.txt     # Dependencias Python
+├── main.py                  # Servidor FastAPI + rutas API
+├── requirements.txt         # Dependencias Python
+├── README.md
+├── .gitignore
+├── __init__.py
 ├── core/
 │   ├── __init__.py
-│   ├── data.py          # Modelos de dominio (Plant, DistCenter, Client, Arc)
-│   ├── model.py         # Formulación MILP con PuLP
-│   └── solver.py        # Resolución y extracción de resultados
+│   ├── data.py              # Modelos de dominio (Plant, DistCenter, Client, Arc)
+│   ├── model.py             # Formulación MILP con PuLP
+│   ├── reporte.py           # Generación de reportes PDF (ReportLab)
+│   └── solver.py            # Resolución y extracción de resultados
 └── static/
-    ├── index.html       # SPA principal
-    ├── editor.js        # Grafo interactivo (vis-network)
-    ├── dashboard.js     # KPIs y panel de resultados
-    └── style.css        # Estilos
+    ├── index.html           # SPA principal
+    ├── editor.js            # Grafo interactivo (vis-network)
+    ├── dashboard.js         # KPIs y panel de resultados
+    ├── style.css            # Estilos
+    ├── vis-network.min.js   # Librería de grafos (local)
+    └── vis-network.min.css
 ```
 
 ---
