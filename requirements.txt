@@ -1,12 +1,5 @@
-# OptiNet — dependencias
-# Instalar: pip install -r requirements.txt
- 
-# ── Servidor ─────────────────────────────────────────────────────
 fastapi==0.111.1
-uvicorn[standard]==0.30.1
- 
-# ── Optimización MILP ────────────────────────────────────────────
+uvicorn[standard]==0.30.1 
 pulp==2.8.0
- 
-# ── Validación de datos (Pydantic, incluido con FastAPI) ─────────
 pydantic==2.7.4
+reportlab

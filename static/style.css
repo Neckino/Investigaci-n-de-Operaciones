@@ -45,6 +45,16 @@ html, body {
     "sidebar canvas results";
   height: 100vh;
   overflow: hidden;
+  transition: grid-template-columns 0.2s ease;
+}
+
+/* Vista maximizada: solo el grafo de la red */
+#app.maximized {
+  grid-template-columns: 0 1fr 0;
+}
+#app.maximized #sidebar,
+#app.maximized #results {
+  display: none;
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
@@ -380,6 +390,12 @@ html, body {
 .canvas-btn:hover { background: var(--bg-2); color: var(--text-1); }
 .canvas-btn svg { width: 15px; height: 15px; }
 
+.canvas-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* Status bar */
 #status-bar {
   position: absolute;
@@ -478,6 +494,43 @@ html, body {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+}
+
+.results-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 26px; height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.icon-btn svg { width: 14px; height: 14px; }
+.icon-btn:hover:not(:disabled) { background: var(--bg-2); color: var(--text-1); }
+.icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.icon-btn.loading {
+  position: relative;
+  pointer-events: none;
+}
+.icon-btn.loading svg { opacity: 0; }
+.icon-btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 
 .results-title {

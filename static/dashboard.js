@@ -181,6 +181,8 @@ window.Dashboard = (() => {
     document.getElementById('results-content').style.display  = 'none'
     document.getElementById('results-state').textContent      = 'Sin resolver'
     document.getElementById('results-state').className        = 'results-state empty'
+    const btn = document.getElementById('btn-reporte')
+    if (btn) btn.disabled = true
   }
 
   function clearResults() {
@@ -189,7 +191,10 @@ window.Dashboard = (() => {
   }
 
   function render(sol) {
+    const btnReporte = document.getElementById('btn-reporte')
+
     if (!sol.factible) {
+      if (btnReporte) btnReporte.disabled = true
       document.getElementById('results-state').textContent = 'Infactible'
       document.getElementById('results-state').className   = 'results-state infeasible'
       document.getElementById('results-empty').style.display   = 'flex'
@@ -204,6 +209,7 @@ window.Dashboard = (() => {
       return
     }
 
+    if (btnReporte) btnReporte.disabled = false
     document.getElementById('results-empty').style.display   = 'none'
     document.getElementById('results-content').style.display = 'block'
     document.getElementById('results-state').textContent     = sol.estado
@@ -348,12 +354,44 @@ window.Dashboard = (() => {
     }).join('')
   }
 
+  /* ── Descarga del reporte PDF ────────────────────────────────────────────── */
+  async function descargarReporte() {
+    const btn = document.getElementById('btn-reporte')
+    if (!btn || btn.disabled) return
+
+    btn.classList.add('loading')
+    btn.disabled = true
+    try {
+      const res = await fetch('/api/reporte')
+      if (!res.ok) {
+        let detail = 'No se pudo generar el reporte'
+        try { detail = (await res.json()).detail || detail } catch (e) {}
+        throw new Error(detail)
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = 'optinet_reporte.pdf'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast('Reporte descargado', 'success')
+    } catch (e) {
+      toast(e.message, 'error')
+    } finally {
+      btn.classList.remove('loading')
+      btn.disabled = false
+    }
+  }
+
   /* ── Util ────────────────────────────────────────────────────────────────── */
   function parseKey(raw) {
     return raw.replace(/[()' ]/g, '').split(',')
   }
 
-  return { render, showEmpty, clearResults }
+  return { render, showEmpty, clearResults, descargarReporte }
 })()
 
 

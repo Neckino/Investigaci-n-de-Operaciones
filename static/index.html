@@ -192,6 +192,12 @@
           <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
       </button>
+      <button class="canvas-btn" id="btn-maximize" onclick="APP.toggleMaximize()" title="Maximizar vista">
+        <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
     </div>
 
     <!-- Status bar -->
@@ -243,7 +249,16 @@
   <aside id="results">
     <div class="results-header">
       <span class="results-title">Resultado</span>
-      <span class="results-state empty" id="results-state">Sin resolver</span>
+      <div class="results-header-actions">
+        <button class="icon-btn" id="btn-reporte" onclick="Dashboard.descargarReporte()" title="Descargar reporte PDF" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <span class="results-state empty" id="results-state">Sin resolver</span>
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -407,10 +422,26 @@ window.APP = (() => {
     } catch(e) {}
   }
 
+  function toggleMaximize() {
+    const app  = document.getElementById('app')
+    const btn  = document.getElementById('btn-maximize')
+    const icon = document.getElementById('icon-maximize')
+    const isMax = app.classList.toggle('maximized')
+
+    btn.title = isMax ? 'Restaurar paneles' : 'Maximizar vista'
+    btn.classList.toggle('active', isMax)
+    icon.innerHTML = isMax
+      ? '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>'
+      : '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>'
+
+    // vis-network necesita recalcular el tamaño del canvas tras el cambio de layout
+    setTimeout(() => window.Editor && window.Editor.fitAll && window.Editor.fitAll(), 50)
+  }
+
   // Inicializar al cargar
   document.addEventListener('DOMContentLoaded', loadData)
 
-  return { loadData, solve, resetData, updateParam }
+  return { loadData, solve, resetData, updateParam, toggleMaximize }
 })()
 </script>
 

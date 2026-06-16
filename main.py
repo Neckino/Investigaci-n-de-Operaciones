@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,7 @@ from core import (
     Plant, DistCenter, Client, Arc,
     optimize,
 )
+from core.reporte import generar_pdf
 
 # ─────────────────────────────────────────────────────────────────
 # Red por defecto (escenario "Base")
@@ -251,6 +252,30 @@ def solve() -> dict:
     }
 
 
+# ── /api/reporte ─────────────────────────────────────────────────
+
+@app.get("/api/reporte")
+def get_reporte() -> StreamingResponse:
+    """
+    Resuelve el MILP sobre la red actual y devuelve un PDF
+    con el resumen ejecutivo de la solución.
+    """
+    net = _current_net
+    result = optimize(net, msg=False)
+
+    if not result.feasible:
+        raise HTTPException(
+            409, f"No se puede generar el reporte: solución no factible ({result.status})"
+        )
+
+    pdf_buf = generar_pdf(result, net)
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="optinet_reporte.pdf"'},
+    )
+
+
 # ── /api/nodes ───────────────────────────────────────────────────
 
 class NodeUpdate(BaseModel):
@@ -332,4 +357,3 @@ def serve_spa() -> FileResponse:
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-    
