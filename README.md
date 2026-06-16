@@ -2,7 +2,7 @@
 
 Aplicación web para la optimización de redes de transporte mediante **Programación Entera Mixta (MILP)**. Permite modelar redes con plantas, centros de distribución opcionales y clientes, visualizar el grafo interactivo y obtener la solución óptima con desglose completo de costos.
 
-> Proyecto académico — Investigación de Operaciones
+> Proyecto académico — Investigación de Operaciones · 2026
 
 ---
 
@@ -12,8 +12,12 @@ Aplicación web para la optimización de redes de transporte mediante **Programa
 - Decisión binaria de apertura de centros de distribución
 - Gestión de déficit con penalización por cliente
 - Restricción configurable de rutas activas simultáneas
-- Visualización interactiva del grafo (vis-network)
-- Dashboard de resultados con desglose de costos
+- Visualización interactiva del grafo (vis-network) con curvatura individual por arista
+- Tooltips informativos por nodo (oferta, capacidad, demanda, estado)
+- Toggle para ocultar/mostrar centros de distribución cerrados
+- Leyenda colapsable con referencias de nodos y aristas
+- Dashboard de resultados con KPIs, desglose de costos y cobertura por cliente
+- Descarga de reporte en PDF (ReportLab)
 - API REST con FastAPI
 
 ---
@@ -98,6 +102,7 @@ min  Σ unit_cost[a]·x[a]  +  Σ fixed_cost[d]·y[d]  +  Σ penalty[c]·s[c]
 ```
 
 **Restricciones principales**
+
 - Oferta máxima por planta
 - Satisfacción de demanda con déficit permitido
 - Capacidad de CD condicionada a su apertura (Big-M)
@@ -114,6 +119,7 @@ min  Σ unit_cost[a]·x[a]  +  Σ fixed_cost[d]·y[d]  +  Σ penalty[c]·s[c]
 | uvicorn | 0.30.1 | Servidor ASGI |
 | pulp | 2.8.0 | Modelado y resolución MILP (solver CBC) |
 | pydantic | 2.7.4 | Validación de datos |
+| reportlab | 4.4.4 | Generación de reportes en PDF |
 
 ---
 
